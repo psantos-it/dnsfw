@@ -1,0 +1,44 @@
+perf stat -ddd -o stats_perf.txt sleep 25
+
+# 
+mpstat 1 30
+
+#
+# Rodar o sar somente com cpu durante o teste
+sar -u ALL -P ALL 2 -t 25 >> stats_sar.txt
+# zerar o arquivo de log das queries
+cd /var/named/data/
+> queries
+# Rodar a carga de trabalho
+# DNSpyre para realizar o teste de query
+dnspyre -n 100000 -c 100000 --server 192.168.0.51 cisco.com terra.com.br globo.com
+# 
+# Concatenando arquivos de logs para as estatisticas se for necessário
+cat queries.10 queries.11 queries.12 queries.13 queries.14 queries.15 > queries.log
+#
+# fazer o parse da saída do sar
+# entrada arquivo stats_sar.txt
+# saída arquivo sar_metrics.csv
+python .\sar_parse.py 
+
+# copiar o arquivo sar_metrics.csv do diretório Python para o Jupyter
+# importar no jupyter sar_metrics.csv
+# 
+Estatisticas SAR.ipynb
+
+# sar com info de rede
+sar -u ALL -P ALL -n DEV 2 -t 25 >> stats_sar.txt
+
+# bpftool para pegar o pid do programa no kernel
+bpftool prog show
+# 608: xdp  name dns  tag 3dc1e1f9d1cff54e  gpl
+#         loaded_at 2024-11-27T22:04:06-0300  uid 0
+#         xlated 1240B  jited 768B  memlock 4096B  map_ids 271,232,233
+#         btf_id 711
+#         pids dnsfw_xdp(840769)
+
+# pidstat para gerar consumo de cpu do programa
+pidstat -p 840769 1 30
+
+# Concatenando arquivos de logs para as estatisticas
+cat queries.10 queries.11 queries.12 queries.13 queries.14 queries.15 > queries.log
