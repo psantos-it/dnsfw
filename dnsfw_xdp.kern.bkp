@@ -20,7 +20,6 @@
 #define DNS_QUERY_REQUEST 0
 #define MAX_QUERY_LENGTH 65
 #define MAX_MAP_ENTRIES 20480
-#define MAX_STATS_ENTRIES 50
 
 struct domain {
 	uint16_t qtype;
@@ -68,7 +67,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__type(key, uint32_t); 
 	__type(value, int); 
-	__uint(max_entries, MAX_STATS_ENTRIES);
+	__uint(max_entries, 100);//TODO #define
 } xdp_query_stats SEC(".maps");
 
 SEC("dnsfilter")
@@ -130,6 +129,12 @@ int dns(struct xdp_md *ctx)
 		saddr = ip_header->saddr;
         daddr = ip_header->daddr;
 		__u32 key = 0;
+		
+
+		// bpf_printk("Source: %d.%d.%d.%d.%u\t", s_addr & 0xFF, (s_addr >> 8) & 0xFF, (s_addr >> 16) & 0xFF, (s_addr >> 24), bpf_htons(udp_header->source));
+		// bpf_printk("Destination: %d.%d.%d.%d.%u\t", d_addr & 0xFF, (d_addr >> 8) & 0xFF, (d_addr >> 16) & 0xFF, (d_addr >> 24), bpf_htons(udp_header->dest));
+		// bpf_printk("length: %u\n", bpf_htons(udp_header->len));
+		// bpf_printk("length: %u\n", bpf_htons(eth_header_size));
 
 		/* Validate DNS header size */ 
 		dns_header = (void *)udp_header + udp_header_size;
@@ -149,9 +154,11 @@ int dns(struct xdp_md *ctx)
 		q_length = parse_query(ctx, query_start, &q);
 
 		bpf_printk("Query: [%s]\n", q.qname);
+//		d_length = parse_host_domain(&q, q_length);
 //		bpf_printk("Domain>: [%s]\n", q.dname);
         
 		if(q_length != -1){
+//			hash_r = hash_domain(q.dname,d_length);
 			hash_r = hash_domain(q.qname,q_length);
 			bpf_printk("Hash: [%u]\n", hash_r);
 			result = bpf_map_lookup_elem(&xdp_domains_map,&hash_r);
@@ -178,7 +185,7 @@ int dns(struct xdp_md *ctx)
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
 	uint32_t hash = 0;
 	for (int i = 0; i < len; i++) {
-		hash = hash * 33 + domain[i];
+		hash = hash * 31 + domain[i];
 	}
 	return hash;
 }
@@ -189,16 +196,15 @@ static int parse_query(struct xdp_md *ctx, void *query_start, struct domain *q){
 	void *cursor = query_start;
 	uint16_t pos = 0, i=0;
 
-	q->qname[0] = '\0';
-	q->qclass = 0;
-	q->qtype = 0;
-	
+	__builtin_memset(&q->qname[0], 0, sizeof(q->qname));
+	q->qclass = 0; q->qtype = 0;
+
 	for(i=0; i<MAX_QUERY_LENGTH; ++i){
 		
 		if(cursor + 1 > data_end)
 			break;
 		if(*(char *)(cursor) == 0){
-			if(cursor + 5 > data_end)
+			if(cursor + 5 > data_end)//can't get record and type
 				break;
 			else{
 				q->qtype = bpf_htons(*(uint16_t *)(cursor+1));
@@ -206,6 +212,7 @@ static int parse_query(struct xdp_md *ctx, void *query_start, struct domain *q){
 				q->qlength = pos;
 			}
 			q->qname[pos] = *(char *)(cursor);
+			//return pos + 1 + 2 + 2;
 			q->qname[pos]='\0';
 			return pos;
 		}
@@ -236,10 +243,12 @@ static int parse_host_domain(struct domain *q, const int ql)
 	}
 	dl = ql-hl-1;
 	if (hl < ql){
+//		__builtin_memset(&q->dname[0], 0, sizeof(q->dname));
 		bpf_probe_read_kernel_str(q->dname, ql-hl, s);
 		q->dname[dl]= 0;
 	}
-
+	// bpf_printk("HL [%i] QL [%i] DL[%i]\n", hl,ql, dl);
+	// bpf_printk("Domain>: [%s]\n", q->dname);
 
 	return dl;
 

@@ -10,7 +10,6 @@
 #include <linux/if_link.h>
 #include <string.h>
 #include <signal.h>
-#include <bits/getopt_core.h>
 
 #define MAX_QUERY_LENGTH 65
 
@@ -39,17 +38,24 @@ static void list_avail_progs(struct bpf_object *obj)
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
 	uint32_t hash = 0;
 	for (int i = 0; i < len; i++) {
-		hash = hash * 33 + domain[i];
+		hash = hash * 31 + domain[i];
 	}
 	return hash;
 }
 
+// Define the function to be called when ctrl-c (SIGINT) is sent to process
+// void signal_callback_handler(int signum) {
+//    printf("\nCaught signal %i\n",signum);
+//    // Terminate program
+//    exit(signum);
+// }
 void signal_callback_handler(int signum) {
    printf("\nCaught signal %i\n",signum);
+   // Terminate program
    exit(signum);
 }
 
-void load_blocklist(int mapfd) {
+void load_blocklist(int mapfd, char *input) {
 
     char command[2048];
     char domain[MAX_QUERY_LENGTH];
@@ -62,6 +68,10 @@ void load_blocklist(int mapfd) {
     char *line;
 	uint64_t hash_result = 0;
 	
+
+ /*   sprintf(command, "wget -q %s", input);
+    system(command);
+*/
     arq = fopen("blackbook.txt.2", "r");
 
     if (arq == NULL){
@@ -102,7 +112,6 @@ int main(int argc, char **argv)
 	__u32 value;
 	__u32 key = 0;
 	uint32_t next_key = 0;
-	int count;
 	xdp_flags = XDP_FLAGS_SKB_MODE;
 
 	struct bpf_object *obj = NULL;
@@ -133,10 +142,13 @@ int main(int argc, char **argv)
 
 	file_log = fopen(XDP_LOG_FILE,"w");
 
+	// optind is for the extra arguments 
+	// which are not parsed 
 	for(; optind < argc; optind++){	 
 		printf("extra arguments: %s\n", argv[optind]); 
 	} 
 
+  // change limits
   struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
   if (setrlimit(RLIMIT_MEMLOCK, &r)) {
     perror("setrlimit(RLIMIT_MEMLOCK, RLIM_INFINITY)");
@@ -200,15 +212,21 @@ int main(int argc, char **argv)
 
 	map_fd = bpf_object__find_map_fd_by_name(obj, DOMAIN_MAP_NAME);
 	fprintf(file_log,"Map FD %i\n",map_fd);
-	load_blocklist(map_fd);
+	load_blocklist(map_fd, "https://raw.githubusercontent.com/stamparm/blackbook/master/blackbook.txt");
 	fclose(file_log);
 	
 	/* Setup signal handler */
 	signal(SIGINT, signal_callback_handler);
 
-    map_query_fd = bpf_object__find_map_fd_by_name(obj, QUERY_MAP_NAME);
+ 	 /* Header */
+	printf("\e[1;1H\e[2J");
+	printf("%-15s %-7s %-100s\n",
+	       "Key", "Count", "Domain");
+
     // Keep the program running to maintain attachment
 	while (1) {
+		// get the values of the map into values.
+		map_query_fd = bpf_object__find_map_fd_by_name(obj, QUERY_MAP_NAME);
 		if (i == -2){
 			key = 0;
 			printf("\e[1;1H\e[2J");
