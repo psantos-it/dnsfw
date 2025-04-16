@@ -1,5 +1,0 @@
-Map founded xdp_domains_map
-Map pinned xdp_domains_map
-Map founded xdp_query_stats
-Map pinned /sys/fs/bpf/xdp_query_stats_map
-Map FD 5
