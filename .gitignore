@@ -1,0 +1,3 @@
+dnsfw_xdp
+*.o
+*.log
