@@ -1,7 +1,7 @@
 KERN_TARGETS  := dnsfw_xdp.kern
 USER_TARGETS := dnsfw_xdp
 
-DEV=enp9s0
+DEV=enp2s0
 
 all:
 	@bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
@@ -11,7 +11,7 @@ all:
 clean:
 	@rm -f /sys/fs/bpf/xdp_domain_map
 	@rm -f /sys/fs/bpf/xdp_query_stats_map	
-	@ip link set dev wlp2s0 xdp off
+	@ip link set dev enp2s0 xdp off
 
 show:
 	ip link show dev $(DEV)

@@ -10,6 +10,7 @@
 #include <linux/if_link.h>
 #include <string.h>
 #include <signal.h>
+#include <bits/getopt_core.h>
 
 #define MAX_QUERY_LENGTH 65
 
@@ -38,7 +39,7 @@ static void list_avail_progs(struct bpf_object *obj)
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
 	uint32_t hash = 0;
 	for (int i = 0; i < len; i++) {
-		hash = hash * 31 + domain[i];
+		hash = hash * 33 + domain[i];
 	}
 	return hash;
 }
@@ -208,7 +209,7 @@ int main(int argc, char **argv)
 
 	map_fd = bpf_object__find_map_fd_by_name(obj, DOMAIN_MAP_NAME);
 	fprintf(file_log,"Map FD %i\n",map_fd);
-	load_blocklist(map_fd, "https://raw.githubusercontent.com/stamparm/blackbook/master/blackbook.txt");
+	load_blocklist(map_fd, "");
 	fclose(file_log);
 	
 	/* Setup signal handler */

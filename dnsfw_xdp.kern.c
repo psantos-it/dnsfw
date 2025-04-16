@@ -186,7 +186,7 @@ int dns(struct xdp_md *ctx)
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
 	uint32_t hash = 0;
 	for (int i = 0; i < len; i++) {
-		hash = hash * 31 + domain[i];
+		hash = hash * 33 + domain[i];
 	}
 	return hash;
 }
