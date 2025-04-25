@@ -1,5 +1,0 @@
-dnsfw_xdp_fqdn.kern.c
-dnsfw_xdp
-*.o
-*.log
-*.bkp
