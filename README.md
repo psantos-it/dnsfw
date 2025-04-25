@@ -44,7 +44,7 @@ systemctl status firewalld
 systemctl stop firewalld # desativa o firewall
 systemctl status firewalld
 ```
-## Instalando
+## Instalando e rodando
 Após clonar o repositório editar o arquivo Makefile para ajustar a interface que será realizado o attach do programa.
 ```bash
 cd dnsfw
