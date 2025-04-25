@@ -27,5 +27,31 @@ Git para clonar o repositório do código-fonte
 dnf -y install git
 git clone git@github.com:psantos-it/dnsfw.git
 ``` 
-Ferramenta para debug dos programas eBPF
-https://github.com/libbpf/bpftool
+Ferramenta para debug dos programas eBPF<br>
+    <pre>https://github.com/libbpf/bpftool</pre>
+
+Comandos úteis para debug do programa eBPF
+```bash
+bpftool prog show
+bpftool map show
+bpftool map dump name xdp_domains_map
+cat /sys/kernel/debug/tracing/trace_pipe
+``` 
+
+Verificar se o firewall está ativado, se estiver desativar.
+```bash
+systemctl status firewalld
+systemctl stop firewalld # desativa o firewall
+systemctl status firewalld
+```
+## Instalando
+Após clonar o repositório editar o arquivo Makefile para ajustar a interface que será realizado o attach do programa.
+```bash
+cd dnsfw
+make
+make run
+```
+Para remover o attach após a execução:
+```bash
+make clean
+```
