@@ -9,3 +9,11 @@ O programa no espaço do kernel cria dois mapas do tipo BPF_MAP_TYPE_HASH: um pa
 
 Sistema operacional Red Hat 9.5 e versão do Kernel 5.14.0.<br>
 Servidor DNS BIND 9.16.23.
+
+## Pré-requisitos
+
+```bash
+dnf -y install clang make gcc glibc-devel.i686 libbpf-devel
+dnf -y install sysstat
+dnf -y install git
+``` 
