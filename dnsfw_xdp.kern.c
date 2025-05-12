@@ -18,7 +18,7 @@
 
 #define DNS_PORT 53
 #define DNS_QUERY_REQUEST 0
-#define MAX_QUERY_LENGTH 65
+#define MAX_QUERY_LENGTH 250
 #define MAX_MAP_ENTRIES 20480
 #define MAX_STATS_ENTRIES 50
 
@@ -27,7 +27,7 @@ struct domain {
 	uint16_t qclass;
 	uint16_t qlength;
 	char qname[MAX_QUERY_LENGTH];
-	char dname[MAX_QUERY_LENGTH];		
+//	char dname[MAX_QUERY_LENGTH];		
 } domain;
 
 struct dns_hdr{
@@ -53,7 +53,7 @@ struct dns_hdr{
 
 // Functions
 static int parse_query (struct xdp_md *ctx, void *query_start, struct domain *q);
-static int parse_host_domain(struct domain *q, const int ql);
+//static int parse_host_domain(struct domain *q, const int ql);
 static __always_inline uint32_t hash_domain(const char *domain, int len);
 
 // Maps
@@ -176,7 +176,7 @@ int dns(struct xdp_md *ctx)
 }
 /**************************************** hash_domain ******************************************************/
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
-	uint32_t hash = 0;
+	uint32_t hash = 5381; //5381
 	for (int i = 0; i < len; i++) {
 		hash = hash * 33 + domain[i];
 	}
@@ -223,26 +223,26 @@ static int parse_query(struct xdp_md *ctx, void *query_start, struct domain *q){
 }
 
 /**************************************** parse_host_domain ******************************************************/
-static int parse_host_domain(struct domain *q, const int ql)
-{
-	char *s = q->qname;
-	int hl=0, dl;
+// static int parse_host_domain(struct domain *q, const int ql)
+// {
+// 	char *s = q->qname;
+// 	int hl=0, dl;
 	
-	++s;
-	for (; *s != '.'; ++s){
-		if (*s == '\0')
-			return -1;
-		++hl;
-	}
-	dl = ql-hl-1;
-	if (hl < ql){
-		bpf_probe_read_kernel_str(q->dname, ql-hl, s);
-		q->dname[dl]= 0;
-	}
+// 	++s;
+// 	for (; *s != '.'; ++s){
+// 		if (*s == '\0')
+// 			return -1;
+// 		++hl;
+// 	}
+// 	dl = ql-hl-1;
+// 	if (hl < ql){
+// 		bpf_probe_read_kernel_str(q->dname, ql-hl, s);
+// 		q->dname[dl]= 0;
+// 	}
 
 
-	return dl;
+// 	return dl;
 
-}
+// }
 
 char _license[] SEC("license") = "GPL";

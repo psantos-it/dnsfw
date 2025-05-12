@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <bits/getopt_core.h>
 
-#define MAX_QUERY_LENGTH 65
+#define MAX_QUERY_LENGTH 250
 
 #define XDP_KERN_FILE "dnsfw_xdp.kern.o"
 #define XDP_LOG_FILE "dnsfw_xdp.log"
@@ -37,7 +37,7 @@ static void list_avail_progs(struct bpf_object *obj)
 }
 
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
-	uint32_t hash = 0;
+	uint32_t hash = 5381; //5381
 	for (int i = 0; i < len; i++) {
 		hash = hash * 33 + domain[i];
 	}
@@ -62,7 +62,7 @@ void load_blocklist(int mapfd) {
     char *line;
 	uint64_t hash_result = 0;
 	
-    arq = fopen("blackbook.txt.2", "r");
+    arq = fopen("blackbook.txt", "r");
 
     if (arq == NULL){
         printf("File not found\n");
