@@ -37,7 +37,7 @@ static void list_avail_progs(struct bpf_object *obj)
 }
 
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
-	uint32_t hash = 5381; //5381
+	uint32_t hash = 5381;
 	for (int i = 0; i < len; i++) {
 		hash = hash * 33 + domain[i];
 	}
@@ -97,13 +97,11 @@ int main(int argc, char **argv)
 	int map_fd;
 	int map_query_fd;
 	char domainresult[MAX_QUERY_LENGTH];	
-	static __u32 xdp_flags;
 	FILE *file_log;
 	__u32 value;
 	__u32 key = 0;
 	uint32_t next_key = 0;
 	int count;
-	xdp_flags = XDP_FLAGS_SKB_MODE;
 
 	struct bpf_object *obj = NULL;
 	struct bpf_program *prog;
@@ -205,6 +203,7 @@ int main(int argc, char **argv)
 	
 	/* Setup signal handler */
 	signal(SIGINT, signal_callback_handler);
+	signal(SIGTERM, signal_callback_handler);
 
     map_query_fd = bpf_object__find_map_fd_by_name(obj, QUERY_MAP_NAME);
     // Keep the program running to maintain attachment
