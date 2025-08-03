@@ -71,7 +71,7 @@ struct {
 	__uint(max_entries, MAX_STATS_ENTRIES);
 } xdp_query_stats SEC(".maps");
 
-SEC("dnsfilter")
+SEC("dnsfw_xdp")
 int dns(struct xdp_md *ctx)
 {
 	void *data_end = (void *)(long)ctx->data_end;

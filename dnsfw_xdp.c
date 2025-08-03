@@ -49,7 +49,7 @@ void signal_callback_handler(int signum) {
    exit(signum);
 }
 
-void load_blocklist(int mapfd) {
+void load_blocklist(int mapfd, const char *filename) {
 
     char command[2048];
     char domain[MAX_QUERY_LENGTH];
@@ -62,7 +62,7 @@ void load_blocklist(int mapfd) {
     char *line;
 	uint64_t hash_result = 0;
 	
-    arq = fopen("blackbook.txt", "r");
+    arq = fopen(filename, "r");
 
     if (arq == NULL){
         printf("File not found\n");
@@ -91,8 +91,10 @@ void load_blocklist(int mapfd) {
 int main(int argc, char **argv) 
 { 
 	int opt, err, i, j = 0, fd;
+	static bool verbose = false;
     int ifindex; 
     char *ifname = "lo";
+	char *domain_filename = "blackbook.txt.2";
 	int prog_fd;
 	int map_fd;
 	int map_query_fd;
@@ -108,24 +110,32 @@ int main(int argc, char **argv)
 	struct bpf_map *dns_stats = NULL;
 	struct bpf_map *query = NULL;
 
-	while((opt = getopt(argc, argv, ":i:")) != -1) 
+	while((opt = getopt(argc, argv, "f:i:vh")) != -1) 
 	{ 
 		switch(opt) 
-		{ 
-			case 'i': 
+		{
+			case 'f':
+            domain_filename = optarg;
+            break;
+    	    case 'i':
 				ifname = optarg;
 				if(!(ifindex = if_nametoindex(ifname)))
 				{
 					printf("Error: finding device %s failed\n", ifname);
 				}
                 else printf("interface: %i - %s\n", ifindex, ifname); 
-                break; 
-			case ':': 
-				printf("option needs a value\n"); 
-				break; 
-			case '?': 
-				printf("unknown option: %c\n", optopt); 
-				break; 
+                break;
+			case 'v':
+            	verbose = true;
+            	break;
+	 	    case 'h':
+        	default:
+            	printf("Uso: %s [-f domain_list] [-i interface] \n", argv[0]);
+            	printf("  -f ARQUIVO   : Arquivo com a lista de dominios\n");
+            	printf("  -i INTERFACE : Interface para anexar o programa\n");
+				printf("  -v           : Modo verbose (estatisticas)\n");
+				printf("  -h           : Exibir esta ajuda\n");
+            	return opt == 'h' ? 0 : 1;
 		} 
 	} 
 
@@ -198,7 +208,7 @@ int main(int argc, char **argv)
 
 	map_fd = bpf_object__find_map_fd_by_name(obj, DOMAIN_MAP_NAME);
 	fprintf(file_log,"Map FD %i\n",map_fd);
-	load_blocklist(map_fd);
+	load_blocklist(map_fd,domain_filename);
 	fclose(file_log);
 	
 	/* Setup signal handler */
@@ -208,22 +218,24 @@ int main(int argc, char **argv)
     map_query_fd = bpf_object__find_map_fd_by_name(obj, QUERY_MAP_NAME);
     // Keep the program running to maintain attachment
 	while (1) {
-		if (i == -2){
-			key = 0;
-			printf("\e[1;1H\e[2J");
-			printf("%-15s %-7s %-100s\n",
-	       		"Key", "Count", "Domain");
-		} 
-		i = bpf_map_get_next_key(map_query_fd, &key, &next_key);
-		//	printf("Map FD: %i-%i Key: %u Next: %u\n", map_fd, i, key, next_key);
-		if(key != 0){
-				bpf_map__lookup_elem(query,&key,sizeof(key), &j, sizeof(j),BPF_ANY);
-				bpf_map__lookup_elem(dns_stats,&key,sizeof(key), &domainresult, sizeof(domainresult),BPF_ANY);
-    			printf("[%-10u]      %-4i  %-100s\n", key, j, domainresult);
-		}
+		if (verbose){
+			if (i == -2){
+				key = 0;
+				printf("\e[1;1H\e[2J");
+				printf("%-15s %-7s %-100s\n",
+	       			"Key", "Count", "Domain");
+			} 
+			i = bpf_map_get_next_key(map_query_fd, &key, &next_key);
+			//	printf("Map FD: %i-%i Key: %u Next: %u\n", map_fd, i, key, next_key);
+			if(key != 0){
+					bpf_map__lookup_elem(query,&key,sizeof(key), &j, sizeof(j),BPF_ANY);
+					bpf_map__lookup_elem(dns_stats,&key,sizeof(key), &domainresult, sizeof(domainresult),BPF_ANY);
+    				printf("[%-10u]      %-4i  %-100s\n", key, j, domainresult);
+			}
 			key = next_key;
-		fflush(stdout);
-		sleep(1);
+			fflush(stdout);
+			sleep(1);
+		}
     }
 	return 0; 
 } 
