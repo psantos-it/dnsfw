@@ -51,6 +51,14 @@ cd dnsfw
 make
 make run
 ```
+Opções de execução:
+```bash
+Uso: ./dnsfw_xdp [-f domain_list] [-i interface]
+  -f ARQUIVO   : Arquivo com a lista de dominios
+  -i INTERFACE : Interface para anexar o programa
+  -v           : Modo verbose (estatisticas)
+  -h           : Exibir esta ajuda
+```
 Para remover o attach após a execução:
 ```bash
 make clean
