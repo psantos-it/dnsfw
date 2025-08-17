@@ -5,7 +5,7 @@ DEV=enp2s0
 
 all:
 	@bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
-	@clang -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -c $(KERN_TARGETS).c -o $(KERN_TARGETS).o
+	@clang -g -O2 -target bpf -D__TARGET_ARCH_x86_64 -I/usr/include -I/usr/include/x86_64-linux-gnu -I/usr/include/x86_64-linux-gnu/asm -c $(KERN_TARGETS).c -o $(KERN_TARGETS).o
 	@gcc $(USER_TARGETS).c -lbpf -lelf -o $(USER_TARGETS)
 
 clean:
