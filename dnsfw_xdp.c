@@ -36,12 +36,39 @@ static void list_avail_progs(struct bpf_object *obj)
 	}
 }
 
+/**************************************** hash_domain ******************************************************/
 static __always_inline uint32_t hash_domain(const char *domain, int len) {
-	uint32_t hash = 5381;
+	uint64_t hash = 5381;
 	for (int i = 0; i < len; i++) {
 		hash = hash * 33 + domain[i];
 	}
 	return hash;
+}
+
+uint64_t hash_fnv1a(const char *domain, int len) {
+	uint64_t hash = 0xcbf29ce484222325ULL;
+	for (int i = 0; i < len; i++) {
+		hash ^= (unsigned char)domain[i];
+		hash *= 0x100000001b3ULL;
+	}
+	return hash;
+}
+
+uint64_t hash_murmur(const char *domain, int len) {
+	uint64_t h1 = 0;
+	const uint64_t c1 = 0x87c4b0fd;
+	const uint64_t c2 = 0x4cf5ad43;
+	
+	for (int i = 0; i < len; i++) {
+		uint64_t k1 = domain[i];
+		k1 *= c1;
+		k1 = (k1 << 31) | (k1 >> 33);
+		k1 *= c2;
+		h1 ^= k1;
+		h1 = (h1 << 27) | (h1 >> 37);
+		h1 = h1 * 5 + 0x52dce729;
+	}
+	return h1;
 }
 
 void signal_callback_handler(int signum) {
@@ -71,7 +98,8 @@ void load_blocklist(int mapfd, const char *filename) {
     while (!feof(arq)){
     line = fgets(domain, MAX_QUERY_LENGTH, arq);
     if (line){  
-	  snprintf(domain_new,MAX_QUERY_LENGTH,".%s",domain); 
+	  //snprintf(domain_new,MAX_QUERY_LENGTH,".%s",domain);
+	  snprintf(domain_new, sizeof(domain_new), ".%.*s", (int)sizeof(domain_new) - 2, domain);
 	  for(j = 0; j < MAX_QUERY_LENGTH; ++j)
         {
             if(domain_new[j] == '\n')
@@ -79,7 +107,8 @@ void load_blocklist(int mapfd, const char *filename) {
             else domain3[j] = domain_new[j];    
         }
 	  len = strlen(domain3);
-	  hash_result = hash_domain(domain3,len);
+	  //hash_result = hash_domain(domain3,len);
+	  hash_result = hash_fnv1a(domain3,len);
 	  printf("Domain [%s] [%ju]: %i\n",domain3,hash_result,i);
 	  bpf_map_update_elem(mapfd, &hash_result, domain3, BPF_NOEXIST); 
 	}
@@ -94,14 +123,14 @@ int main(int argc, char **argv)
 	static bool verbose = false;
     int ifindex; 
     char *ifname = "lo";
-	char *domain_filename = "blackbook.txt.2";
+	char *domain_filename = "blackbook.txt";
 	int prog_fd;
 	int map_fd;
 	int map_query_fd;
 	char domainresult[MAX_QUERY_LENGTH];	
 	FILE *file_log;
-	__u32 value;
-	__u32 key = 0;
+	//__u32 value;
+	__u64 key = 0;
 	uint32_t next_key = 0;
 	int count;
 
@@ -230,7 +259,7 @@ int main(int argc, char **argv)
 			if(key != 0){
 					bpf_map__lookup_elem(query,&key,sizeof(key), &j, sizeof(j),BPF_ANY);
 					bpf_map__lookup_elem(dns_stats,&key,sizeof(key), &domainresult, sizeof(domainresult),BPF_ANY);
-    				printf("[%-10u]      %-4i  %-100s\n", key, j, domainresult);
+    				printf("[%-10llu]      %-4i  %-100s\n", key, j, domainresult);
 			}
 			key = next_key;
 			fflush(stdout);

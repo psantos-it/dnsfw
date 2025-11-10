@@ -18,7 +18,7 @@
 
 #define DNS_PORT 53
 #define DNS_QUERY_REQUEST 0
-#define MAX_QUERY_LENGTH 250
+#define MAX_QUERY_LENGTH 251
 #define MAX_MAP_ENTRIES 20480
 #define MAX_STATS_ENTRIES 50
 
@@ -55,18 +55,20 @@ struct dns_hdr{
 static int parse_query (struct xdp_md *ctx, void *query_start, struct domain *q);
 //static int parse_host_domain(struct domain *q, const int ql);
 static __always_inline uint32_t hash_domain(const char *domain, int len);
+uint64_t hash_fnv1a(const char *domain, int len);
+uint64_t hash_murmur(const char *domain, int len);
 
 // Maps
 struct bpf_map_def {
 	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, uint32_t);
+	__type(key, uint64_t);
 	__type(value, char[MAX_QUERY_LENGTH]);
 	__uint(max_entries, MAX_MAP_ENTRIES);
 } xdp_domains_map SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
-	__type(key, uint32_t); 
+	__type(key, uint64_t); 
 	__type(value, int); 
 	__uint(max_entries, MAX_STATS_ENTRIES);
 } xdp_query_stats SEC(".maps");
@@ -89,7 +91,7 @@ int dns(struct xdp_md *ctx)
     uint32_t dns_header_size = 0;
     uint32_t saddr = 0;
     uint32_t daddr = 0;
-	uint32_t hash_r;
+	uint64_t hash_r;
 	uint32_t *r;
 	char *result = NULL;
 	int q_length;
@@ -148,12 +150,13 @@ int dns(struct xdp_md *ctx)
         /* Extract domain from DNS query */
 		q_length = parse_query(ctx, query_start, &q);
 
-		bpf_printk("Query: [%s]\n", q.qname);
+//		bpf_printk("Query: [%s]\n", q.qname);
 //		bpf_printk("Domain>: [%s]\n", q.dname);
         
 		if(q_length != -1){
-			hash_r = hash_domain(q.qname,q_length);
-			bpf_printk("Hash: [%u]\n", hash_r);
+			//hash_r = hash_domain(q.qname,q_length);
+			hash_r = hash_fnv1a(q.qname,q_length);
+		//	bpf_printk("Hash: [%u]\n", hash_r);
 			result = bpf_map_lookup_elem(&xdp_domains_map,&hash_r);
 			if(result){
 				bpf_printk("domain blocked [%s]\n", result);
@@ -163,12 +166,13 @@ int dns(struct xdp_md *ctx)
 					counter += 1;
 					bpf_map_update_elem(&xdp_query_stats, &hash_r, &counter, BPF_ANY);
 				} else{
+					counter += 1;
 					bpf_map_update_elem(&xdp_query_stats, &hash_r, &counter, BPF_ANY);
-					bpf_printk("stats [%u]\n", r);
+		//			bpf_printk("stats [%u]\n", r);
 				}
 				return XDP_DROP;
 				//return XDP_PASS; //pass for debug
-			} else bpf_printk("domain allowed [%s]\n", q.qname);
+			} //else bpf_printk("domain allowed [%s]\n", q.qname);
 		} 
     }
     
@@ -181,6 +185,32 @@ static __always_inline uint32_t hash_domain(const char *domain, int len) {
 		hash = hash * 33 + domain[i];
 	}
 	return hash;
+}
+
+uint64_t hash_fnv1a(const char *domain, int len) {
+	uint64_t hash = 0xcbf29ce484222325ULL;
+	for (int i = 0; i < len; i++) {
+		hash ^= (unsigned char)domain[i];
+		hash *= 0x100000001b3ULL;
+	}
+	return hash;
+}
+
+uint64_t hash_murmur(const char *domain, int len) {
+	uint64_t h1 = 0;
+	const uint64_t c1 = 0x87c4b0fd;
+	const uint64_t c2 = 0x4cf5ad43;
+	
+	for (int i = 0; i < len; i++) {
+		uint64_t k1 = domain[i];
+		k1 *= c1;
+		k1 = (k1 << 31) | (k1 >> 33);
+		k1 *= c2;
+		h1 ^= k1;
+		h1 = (h1 << 27) | (h1 >> 37);
+		h1 = h1 * 5 + 0x52dce729;
+	}
+	return h1;
 }
 
 /**************************************** parse_query ******************************************************/

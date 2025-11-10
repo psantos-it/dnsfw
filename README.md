@@ -11,16 +11,18 @@ Sistema operacional Red Hat 9.5 e versão do Kernel 5.14.0.<br>
 Servidor DNS BIND 9.16.23.
 
 ## Pré-requisitos
-Pacotes utilizados para compilar o código-fonte.
+Pacotes utilizados para compilar o código-fonte (Redhat).
 ```bash
 dnf -y install clang make gcc glibc-devel.i686 libbpf-devel
-dnf -y install sysstat
-dnf -y install git
+```
+Pacotes utilizados para compilar o código-fonte (Ubuntu).
+```bash
+apt -y install gcc clang make llvm libbpf-dev libc6-dev-i386
 ``` 
+
 Pacote utilizado para monitorar o consumo de CPU.
 ```bash
 dnf -y install sysstat
-dnf -y install git
 ``` 
 Git para clonar o repositório do código-fonte
 ```bash
