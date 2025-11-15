@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <bits/getopt_core.h>
 
-#define MAX_QUERY_LENGTH 250
+#define MAX_QUERY_LENGTH 56 //251
 
 // XDP Flags - definições corretas (forçadas)
 #undef XDP_FLAGS_SKB_MODE

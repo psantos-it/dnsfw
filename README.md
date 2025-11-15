@@ -55,11 +55,20 @@ make run
 ```
 Opções de execução:
 ```bash
-Uso: ./dnsfw_xdp [-f domain_list] [-i interface]
+Uso: ./dnsfw_xdp [-f domain_list] [-i interface] [-m xdp_mode] [-v] [-h]
   -f ARQUIVO   : Arquivo com a lista de dominios
   -i INTERFACE : Interface para anexar o programa
+  -m MODE      : Modo XDP (native, offload, skb) [default: native]
+               : native   = xdpdrv (driver native)
+               : offload  = xdpoffload (hardware offload via SmartNIC)
+               : skb      = xdpsock (generic)
   -v           : Modo verbose (estatisticas)
   -h           : Exibir esta ajuda
+
+Exemplos:
+  ./dnsfw_xdp -i eth0 -m native       # Attach em modo driver nativo
+  ./dnsfw_xdp -i eth0 -m offload      # Attach em modo hardware offload
+  
 ```
 Para remover o attach após a execução:
 ```bash
