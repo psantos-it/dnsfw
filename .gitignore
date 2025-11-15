@@ -3,3 +3,9 @@ dnsfw_xdp
 *.o
 *.log
 *.bkp
+dnsfw_xdp copy 2.c
+dnsfw_xdp copy 3.c
+dnsfw_xdp copy.c
+Guia_Modo_XDP.md
+debug_xdp_attach.c
+debug_xdp_attach
